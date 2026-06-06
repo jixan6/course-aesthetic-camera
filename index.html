@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="美感拍照" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="format-detection" content="telephone=no" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-180.png" />
+  <title>課程實景美感拍照助理 V0.5</title>
+  <style>
+    :root{
+      --bg:#0f172a;--panel:rgba(15,23,42,.78);--panel2:rgba(255,255,255,.10);
+      --text:#f8fafc;--muted:#cbd5e1;--line:rgba(255,255,255,.36);--accent:#facc15;
+      --ok:#86efac;--warn:#fca5a5;--blue:#93c5fd;--safe-top:env(safe-area-inset-top);--safe-bottom:env(safe-area-inset-bottom)
+    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC",sans-serif;overflow:hidden}
+    button,input{font:inherit} button{cursor:pointer} canvas{display:none}
+    #app{position:fixed;inset:0;background:#000;overflow:hidden}
+    video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;transform:translateZ(0)}
+    .shade{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.55),rgba(0,0,0,0) 26%,rgba(0,0,0,0) 64%,rgba(0,0,0,.72));pointer-events:none;z-index:2}
+    .topbar{position:absolute;top:calc(8px + var(--safe-top));left:9px;right:9px;z-index:12;display:flex;flex-direction:column;gap:8px}
+    .hint-card{background:var(--panel);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.16);border-radius:18px;padding:10px 12px;box-shadow:0 14px 38px rgba(0,0,0,.30)}
+    .hint-main{display:flex;align-items:center;gap:7px;font-weight:900;font-size:18px;line-height:1.22;letter-spacing:.01em}
+    .hint-principle{color:var(--accent);white-space:nowrap}.hint-short{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .hint-meta{margin-top:7px;display:flex;gap:7px;align-items:center;font-size:12px;color:var(--muted);overflow-x:auto;scrollbar-width:none}.hint-meta::-webkit-scrollbar{display:none}
+    .pill{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;background:var(--panel2);border:1px solid rgba(255,255,255,.12);white-space:nowrap}
+    .mode-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}.mode-row::-webkit-scrollbar{display:none}
+    .chip{border:1px solid rgba(255,255,255,.16);background:rgba(15,23,42,.66);color:var(--text);border-radius:999px;padding:8px 11px;font-size:14px;white-space:nowrap;backdrop-filter:blur(10px)}
+    .chip.active{background:rgba(250,204,21,.20);border-color:rgba(250,204,21,.72);color:#fef9c3;font-weight:800}
+    .overlay{position:absolute;inset:0;pointer-events:none;z-index:4}.overlay.hidden{display:none}
+    .grid-lines:before{content:"";position:absolute;inset:0;background-image:linear-gradient(to right,transparent 33.2%,var(--line) 33.3%,var(--line) 33.6%,transparent 33.7%,transparent 66.2%,var(--line) 66.3%,var(--line) 66.6%,transparent 66.7%),linear-gradient(to bottom,transparent 33.2%,var(--line) 33.3%,var(--line) 33.6%,transparent 33.7%,transparent 66.2%,var(--line) 66.3%,var(--line) 66.6%,transparent 66.7%);opacity:.5}
+    .center-frame{position:absolute;left:50%;top:50%;width:58vw;max-width:340px;aspect-ratio:4/3;transform:translate(-50%,-50%);border:2px solid rgba(250,204,21,.60);border-radius:18px;box-shadow:0 0 0 999px rgba(0,0,0,.015);opacity:.82}
+    .horizon{position:absolute;left:15%;right:15%;top:50%;height:2px;background:rgba(255,255,255,.50);box-shadow:0 0 12px rgba(255,255,255,.45);opacity:.45}
+    .safe-title{position:absolute;left:9%;right:9%;top:calc(22% + var(--safe-top));height:18%;border:2px dashed rgba(147,197,253,.55);border-radius:22px;display:flex;align-items:flex-start;justify-content:center;padding-top:8px;color:#dbeafe;font-size:12px;opacity:.76}
+    .guide-label{position:absolute;bottom:calc(116px + var(--safe-bottom));left:50%;transform:translateX(-50%);background:rgba(15,23,42,.62);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:5px 10px;font-size:12px;color:#e2e8f0;backdrop-filter:blur(12px)}
+    .bottom{position:absolute;left:0;right:0;bottom:0;z-index:12;padding:10px 13px calc(13px + var(--safe-bottom));display:grid;gap:9px;background:linear-gradient(to top,rgba(0,0,0,.75),rgba(0,0,0,0));}
+    .controls{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px}.mini-btn{height:44px;border:0;border-radius:14px;background:rgba(255,255,255,.13);color:#fff;padding:0 10px;font-weight:800;border:1px solid rgba(255,255,255,.16)}
+    .mini-btn.active{background:rgba(250,204,21,.18);border-color:rgba(250,204,21,.62);color:#fef9c3}.shutter{width:74px;height:74px;border-radius:50%;border:5px solid rgba(255,255,255,.92);background:rgba(255,255,255,.22);box-shadow:0 0 0 5px rgba(0,0,0,.22)}
+    .subrow{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--muted)}.status{display:flex;align-items:center;gap:6px;min-width:0}.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 12px var(--ok)}
+    .sheet{position:absolute;inset:auto 0 0 0;z-index:35;background:#0f172a;border-radius:24px 24px 0 0;border-top:1px solid rgba(255,255,255,.16);box-shadow:0 -24px 60px rgba(0,0,0,.45);transform:translateY(105%);transition:transform .28s ease;max-height:93vh;overflow:auto;padding:15px 15px calc(18px + var(--safe-bottom))}.sheet.show{transform:translateY(0)}
+    .sheet h2{margin:0 0 10px;font-size:20px}.preview-img{width:100%;border-radius:16px;background:#111;display:block;max-height:43vh;object-fit:contain;border:1px solid rgba(255,255,255,.12)}
+    .analysis{margin-top:12px;display:grid;gap:10px}.analysis-card{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:12px}.analysis-title{font-weight:900;color:#fef9c3;margin-bottom:5px}.analysis p{margin:0;color:#e2e8f0;line-height:1.55;font-size:15px}
+    .sheet-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.primary{border:0;background:#facc15;color:#1f2937;border-radius:14px;padding:13px;font-weight:900}.secondary{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;border-radius:14px;padding:13px;font-weight:800}
+    .setup{position:absolute;inset:0;z-index:45;background:linear-gradient(180deg,#0f172a,#111827);display:grid;place-items:center;padding:20px}.setup-card{max-width:540px;width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:24px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.32)}.setup h1{font-size:25px;line-height:1.2;margin:0 0 10px}.setup p{color:#cbd5e1;line-height:1.65;margin:8px 0}.setup ul{padding-left:1.25em;color:#dbeafe;line-height:1.65;margin:12px 0}.setup .primary{width:100%;margin-top:12px;font-size:17px}.tiny{font-size:12px;color:#94a3b8;line-height:1.55}.hidden{display:none!important}
+    .tool-sheet .toggle-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:12px}.toggle input{width:20px;height:20px;accent-color:#facc15}
+    input[type=file]{display:none}.fallback-label{display:block;text-align:center;margin-top:9px;border:1px dashed rgba(255,255,255,.30);border-radius:14px;padding:12px;color:#dbeafe;background:rgba(255,255,255,.06);font-weight:800}
+    @media (orientation:landscape){.hint-main{font-size:16px}.shutter{width:62px;height:62px}.center-frame{height:45vh;width:auto}.sheet{max-height:96vh}.preview-img{max-height:38vh}.bottom{padding-bottom:10px}.topbar{top:8px}.mode-row{display:none}}
+  </style>
+</head>
+<body>
+<div id="app">
+  <video id="video" autoplay playsinline muted></video><div class="shade"></div>
+  <div class="overlay grid-lines" id="gridLayer"></div>
+  <div class="overlay" id="frameLayer"><div class="center-frame"></div></div>
+  <div class="overlay" id="horizonLayer"><div class="horizon"></div></div>
+  <div class="overlay hidden" id="safeLayer"><div class="safe-title">留白區：適合官網／簡報標題</div></div>
+  <div class="overlay" id="guideLayer"><div class="guide-label" id="guideLabel">側前方｜微俯拍｜靠近</div></div>
+
+  <div class="topbar">
+    <div class="hint-card" id="hintCard" role="button" aria-label="目前美感提示">
+      <div class="hint-main"><span class="hint-principle" id="principle">比例</span><span>｜</span><span class="hint-short" id="shortHint">靠近手部與教具</span></div>
+      <div class="hint-meta"><span class="pill" id="modeLabel">情境：學生操作</span><span class="pill" id="actionLabel">角度：側前方</span><span class="pill" id="lightLabel">光線檢查中</span></div>
+    </div>
+    <div class="mode-row" id="modeRow" aria-label="模擬情境切換">
+      <button class="chip active" data-mode="operation">學生操作</button><button class="chip" data-mode="discussion">小組討論</button><button class="chip" data-mode="teaching">教師引導</button><button class="chip" data-mode="result">成果展示</button><button class="chip" data-mode="wide">課程全景</button><button class="chip" data-mode="wait">等待時機</button>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <div class="controls"><button class="mini-btn" id="nextHintBtn">換提示</button><button class="shutter" id="captureBtn" aria-label="拍照"></button><button class="mini-btn" id="toolsBtn">輔助線</button></div>
+    <div class="subrow"><div class="status"><span class="dot"></span><span id="cameraStatus">相機待啟動</span></div><div>V0.5｜iPhone PWA</div></div>
+  </div>
+
+  <div class="sheet" id="photoSheet" aria-live="polite">
+    <h2>拍後建議</h2><img id="preview" class="preview-img" alt="拍攝預覽" />
+    <div class="analysis">
+      <div class="analysis-card"><div class="analysis-title">照片初判</div><p id="analysisMain"></p></div>
+      <div class="analysis-card"><div class="analysis-title">美感原則</div><p id="analysisPrinciple"></p></div>
+      <div class="analysis-card"><div class="analysis-title">補拍建議</div><p id="analysisRetake"></p></div>
+    </div>
+    <div class="sheet-actions"><button class="secondary" id="retakeBtn">重新取景</button><button class="primary" id="saveRecordBtn">儲存紀錄</button></div>
+    <p class="tiny" id="recordStatus">本原型暫存於此手機瀏覽器，不會上傳雲端。正式版再接 Google Drive／Sheet 與 AI 分析。</p>
+  </div>
+
+  <div class="sheet tool-sheet" id="toolSheet">
+    <h2>取景輔助線</h2>
+    <div class="toggle-grid">
+      <label class="toggle">九宮格 <input type="checkbox" data-layer="gridLayer" checked></label>
+      <label class="toggle">水平線 <input type="checkbox" data-layer="horizonLayer" checked></label>
+      <label class="toggle">主體框 <input type="checkbox" data-layer="frameLayer" checked></label>
+      <label class="toggle">留白框 <input type="checkbox" data-layer="safeLayer"></label>
+      <label class="toggle">角度提示 <input type="checkbox" data-layer="guideLayer" checked></label>
+    </div>
+    <div class="analysis-card" style="margin-top:12px"><div class="analysis-title">使用建議</div><p>課程現場先保留九宮格、水平線與角度提示；若要拍官網主圖或簡報封面，再打開留白框。</p></div>
+    <button class="primary" id="closeToolsBtn" style="width:100%;margin-top:12px">完成</button>
+  </div>
+
+  <div class="setup" id="setup">
+    <div class="setup-card">
+      <h1>課程實景美感拍照助理</h1>
+      <p>V0.5 先測試 iPhone 現場取景體驗：美感原則、角度位置、放大縮小與拍後補拍建議。</p>
+      <ul><li>取景提示格式：美感原則｜具體操作。</li><li>可開關九宮格、水平線、主體框與留白框。</li><li>若即時相機無法啟動，可用下方備用拍照選檔。</li></ul>
+      <button class="primary" id="startBtn">啟動相機</button>
+      <label class="fallback-label" for="fallbackInput">備用：使用 iPhone 拍照／選照片</label>
+      <input id="fallbackInput" type="file" accept="image/*" capture="environment">
+      <p class="tiny">相機串流需 HTTPS 網址與 Safari 相機權限；直接開本機檔案通常無法啟用即時取景。</p>
+    </div>
+  </div>
+
+  <canvas id="canvas"></canvas><canvas id="sampleCanvas" width="48" height="48"></canvas>
+</div>
+<script>
+(()=>{
+  const $=id=>document.getElementById(id);
+  const video=$('video'), canvas=$('canvas'), sampleCanvas=$('sampleCanvas'), setup=$('setup'), photoSheet=$('photoSheet'), toolSheet=$('toolSheet');
+  const principleEl=$('principle'), shortHintEl=$('shortHint'), modeLabel=$('modeLabel'), actionLabel=$('actionLabel'), lightLabel=$('lightLabel'), guideLabel=$('guideLabel'), cameraStatus=$('cameraStatus');
+  const preview=$('preview'), analysisMain=$('analysisMain'), analysisPrinciple=$('analysisPrinciple'), analysisRetake=$('analysisRetake'), recordStatus=$('recordStatus');
+  let mode='operation', hintIndex=0, currentHint=null, lastDataUrl='', lastBrightness=null, cameraReady=false, brightnessTimer=null;
+  const modeNames={operation:'學生操作',discussion:'小組討論',teaching:'教師引導',result:'成果展示',wide:'課程全景',wait:'等待時機'};
+  const db={
+    operation:[
+      {p:'比例',s:'靠近手部與教具',a:'側前方｜微俯拍｜靠近',main:'學生操作照片要讓手部、教具與學習單成為明確主體。',retake:'補拍一張側前方中近景，讓學生表情、手部與教具同時入鏡。'},
+      {p:'對比',s:'放大操作重點',a:'靠近｜放大｜弱化背景',main:'用大小與動作差異凸顯學習焦點，避免背景搶走注意力。',retake:'靠近操作區，排除雜亂背景，讓觀眾一眼看出學生正在做什麼。'},
+      {p:'漸層',s:'微俯拍保留材料層次',a:'30°微俯拍｜保留前中後景',main:'桌面操作可用微俯拍呈現前景材料、中景手部與後方學生。',retake:'採 30 至 45 度微俯拍，不要完全正上方，以免失去表情與互動。'},
+      {p:'統一',s:'聚焦同一個學習動作',a:'縮小取景｜聚焦一組',main:'畫面應集中在同一個學習事件，避免拍進太多無關動作。',retake:'選一組最明顯的操作情境，縮小取景範圍。'}],
+    discussion:[
+      {p:'韻律',s:'側前方拍討論動線',a:'側前方｜平視｜等待回應',main:'小組討論的重點是視線、手勢與材料之間的流動關係。',retake:'移到側前方，拍到表情、手勢與桌面材料。'},
+      {p:'變化',s:'避開背影，拍到表情',a:'橫移｜側前方｜平視',main:'只有背影會讓畫面單調，也不容易看出討論張力。',retake:'移到學生側前方，等待有人指認或回應時拍攝。'},
+      {p:'均衡',s:'保留人物與桌面平衡',a:'退後｜平視｜保留桌面',main:'討論照片要避免人物擠在一側，桌面材料完全缺席。',retake:'稍微退後，讓人物、材料與空間有穩定比例。'}],
+    teaching:[
+      {p:'統一',s:'拍到手勢與學生反應',a:'教師側邊｜平視｜保留教材',main:'教師引導照片應讓教師、學生與教材共同指向同一教學事件。',retake:'從教師側邊拍，保留手勢、教材與學生觀看反應。'},
+      {p:'韻律',s:'保留視線集中方向',a:'側邊｜平視｜等指認',main:'學生視線若集中在教師或教材上，會形成清楚的教學動線。',retake:'等待教師指認或學生回應時拍攝。'},
+      {p:'對比',s:'讓引導者與教材更突出',a:'靠近｜保留學生反應',main:'利用位置、光線或取景大小，凸顯教師示範與教材重點。',retake:'靠近教材與教師手勢，但仍保留學生反應。'}],
+    result:[
+      {p:'對稱',s:'正面拍攝並保持水平',a:'正面｜水平｜退後',main:'成果展示常適合穩定、正式、清楚的畫面。',retake:'站到成果物正前方，保持水平，避免作品歪斜。'},
+      {p:'對比',s:'微仰拍凸顯成果',a:'微仰拍｜保留表情與作品',main:'學生展示作品時，可用微仰拍增加主角感。',retake:'稍微降低手機角度，但不要過低，以免人物變形。'},
+      {p:'留白',s:'保留上方標題空間',a:'退後｜留白｜適合主圖',main:'若照片要用於官網或簡報，乾淨留白有利於後續排版。',retake:'退後一點，在上方或側邊保留乾淨空間。'}],
+    wide:[
+      {p:'漸層',s:'退後保留前中後景',a:'退後｜斜向｜保持水平',main:'課程全景要呈現場地、學生、教師與教具之間的空間層次。',retake:'退後並採斜向取景，保留前景教具、中景學生與後景場地。'},
+      {p:'重複',s:'保留多人活動節奏',a:'退後｜斜向｜保留多組',main:'多位學生同時操作或參與時，可形成課程活動的節奏感。',retake:'退後一點，讓多組活動或多人排列完整入鏡。'},
+      {p:'均衡',s:'讓人與空間穩定分布',a:'左右微調｜保持水平',main:'全景容易一邊太空、一邊太擠，需要調整左右視覺重量。',retake:'稍微左右移動，讓人物、教具與場地分布更穩定。'}],
+    wait:[
+      {p:'變化',s:'等待操作或指認出現',a:'等待｜觀察｜再拍',main:'目前若像靜態合照，學習動作不足，照片敘事力會偏弱。',retake:'等待學生開始操作、討論、指認或發表時再拍。'},
+      {p:'統一',s:'聚焦一個學習事件',a:'靠近｜聚焦一組',main:'若畫面同時出現太多無關事件，觀眾不容易理解照片重點。',retake:'靠近一組正在活動的學生，排除無關背景。'},
+      {p:'調和',s:'先避開背景雜物',a:'換角度｜靠近｜避開雜物',main:'背景干擾會降低照片可用性，也會讓學習主體不清楚。',retake:'換角度或靠近主體，減少雜物與路人干擾。'}]
+  };
+  function explainPrinciple(p){return ({統一:'讓學生、教具與學習動作共同指向同一個學習事件。',變化:'透過手勢、表情、操作或討論，避免畫面像靜態合照。',對稱:'讓成果展示或正式紀錄呈現穩定、清楚、端正的視覺效果。',均衡:'調整人物、教具與空間的視覺重量，避免一邊太空或太擠。',調和:'減少背景雜物、刺眼色彩與反光，使畫面乾淨協調。',對比:'利用大小、明暗、動靜差異凸顯學生學習焦點。',重複:'保留多人操作、作品排列或活動節奏，形成秩序感。',漸層:'保留前中後景或遠近層次，呈現課程現場深度。',比例:'調整學生、教具、手部與空間大小關係，使學習行為清楚。',韻律:'捕捉視線、手勢、討論與操作流程的連續動感。',留白:'保留乾淨空間，方便後續官網、簡報或標題排版。'}[p]||'依此美感原則調整取景，讓照片更清楚呈現學習情境。')}
+  function updateHint(hint){currentHint=hint||db[mode][hintIndex%db[mode].length];principleEl.textContent=currentHint.p;shortHintEl.textContent=currentHint.s;modeLabel.textContent='情境：'+modeNames[mode];actionLabel.textContent='角度：'+(currentHint.a||'依現場調整');guideLabel.textContent=currentHint.a||currentHint.s}
+  function setMode(m){mode=m;hintIndex=0;document.querySelectorAll('.chip').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));updateHint()}
+  async function startCamera(){try{if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw new Error('此瀏覽器不支援即時相機串流');const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});video.srcObject=stream;await video.play();cameraReady=true;setup.classList.add('hidden');cameraStatus.textContent='相機已啟動';updateHint();startBrightnessCheck()}catch(err){cameraReady=false;cameraStatus.textContent='相機啟動失敗';alert('無法啟動即時相機：'+err.message+'\n\n請確認：1. 以 HTTPS 網址開啟；2. Safari 已允許相機；3. 若仍不行，可使用「備用拍照／選照片」。')}}
+  function startBrightnessCheck(){if(brightnessTimer)clearInterval(brightnessTimer);const ctx=sampleCanvas.getContext('2d',{willReadFrequently:true});brightnessTimer=setInterval(()=>{if(!cameraReady||video.readyState<2)return;ctx.drawImage(video,0,0,sampleCanvas.width,sampleCanvas.height);const data=ctx.getImageData(0,0,sampleCanvas.width,sampleCanvas.height).data;let sum=0;for(let i=0;i<data.length;i+=4)sum+=.2126*data[i]+.7152*data[i+1]+.0722*data[i+2];const avg=sum/(data.length/4);lastBrightness=avg;if(avg<48){lightLabel.textContent='偏暗';lightLabel.style.color='var(--warn)';updateHint({p:'對比',s:'畫面偏暗，靠近光源',a:'換亮側｜靠近光源',main:'目前亮度偏低，會影響學生表情、手部與教具細節。',retake:'換到亮側、靠近光源，或等待較穩定的光線再拍。'})}else if(avg>222){lightLabel.textContent='過亮';lightLabel.style.color='var(--warn)';updateHint({p:'調和',s:'畫面過亮，避開強光',a:'換角度｜避開反光',main:'目前亮度過高，成果物或學習單可能失去細節。',retake:'改變拍攝角度，避開強光或反光桌面。'})}else{lightLabel.textContent='光線可用';lightLabel.style.color='var(--ok)';updateHint()}},1400)}
+  function showAnalysis(dataUrl){lastDataUrl=dataUrl;preview.src=dataUrl;analysisMain.textContent=currentHint.main||'此照片可作為課程紀錄，請檢查主體、學習動作與背景是否清楚。';analysisPrinciple.textContent=currentHint.p+'：'+explainPrinciple(currentHint.p);analysisRetake.textContent=currentHint.retake||'建議補拍一張側前方中近景，讓學生表情、手部與教具同時入鏡。';recordStatus.textContent='尚未儲存。本原型僅暫存於此手機瀏覽器。';photoSheet.classList.add('show')}
+  function capture(){if(!cameraReady||video.readyState<2){alert('相機尚未準備完成，可先用備用拍照／選照片。');return}canvas.width=video.videoWidth;canvas.height=video.videoHeight;canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);showAnalysis(canvas.toDataURL('image/jpeg',.88))}
+  function saveRecord(){if(!lastDataUrl)return;const records=JSON.parse(localStorage.getItem('courseAestheticPhotoRecordsV05')||'[]');records.push({time:new Date().toISOString(),mode:modeNames[mode],principle:currentHint.p,hint:currentHint.s,action:currentHint.a,brightness:lastBrightness,note:analysisRetake.textContent,image:lastDataUrl});localStorage.setItem('courseAestheticPhotoRecordsV05',JSON.stringify(records.slice(-20)));recordStatus.textContent='已暫存 1 筆紀錄於本機。正式版可改為上傳 Google Drive／Sheet。'}
+  $('startBtn').addEventListener('click',startCamera);$('captureBtn').addEventListener('click',capture);$('retakeBtn').addEventListener('click',()=>photoSheet.classList.remove('show'));$('saveRecordBtn').addEventListener('click',saveRecord);$('nextHintBtn').addEventListener('click',()=>{hintIndex=(hintIndex+1)%db[mode].length;updateHint()});
+  $('toolsBtn').addEventListener('click',()=>toolSheet.classList.add('show'));$('closeToolsBtn').addEventListener('click',()=>toolSheet.classList.remove('show'));
+  document.querySelectorAll('.toggle input').forEach(input=>input.addEventListener('change',e=>$(e.target.dataset.layer).classList.toggle('hidden',!e.target.checked)));
+  $('modeRow').addEventListener('click',e=>{const btn=e.target.closest('button[data-mode]');if(btn)setMode(btn.dataset.mode)});
+  $('hintCard').addEventListener('click',()=>alert('情境：'+modeNames[mode]+'\n美感原則：'+currentHint.p+'\n操作建議：'+currentHint.s+'\n角度／位置：'+(currentHint.a||'依現場調整')+'\n\n'+(currentHint.main||'')));
+  $('fallbackInput').addEventListener('change',e=>{const file=e.target.files&&e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{setup.classList.add('hidden');cameraStatus.textContent='使用備用照片';showAnalysis(reader.result)};reader.readAsDataURL(file)});
+  updateHint();
+})();
+</script>
+</body>
+</html>
